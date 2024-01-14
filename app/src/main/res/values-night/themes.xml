@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.MainWord" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Set the desired button color -->
+
+    </style>
+
+    <style name="Theme.MainWord" parent="Base.Theme.MainWord" />
+</resources>

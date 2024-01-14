@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="category_logos">
+        <item>@drawable/fruits_logo</item>
+        <item>@drawable/animals_logo</item>
+    </array>
+    <array name="Fruits">
+        <item>Banana</item>
+        <item>Apple</item>
+        <item>Orange</item>
+        <item>Grape</item>
+        <item>Kiwi</item>
+        <item>Strawberry</item>
+        <item>Pineapple</item>
+        <item>Watermelon</item>
+        <item>Mango</item>
+        <item>Blueberry</item>
+    </array>
+
+    <array name="Animals">
+        <item>Lion</item>
+        <item>Elephant</item>
+        <item>Giraffe</item>
+        <item>Monkey</item>
+        <item>Zebra</item>
+        <item>Tiger</item>
+        <item>Penguin</item>
+        <item>Koala</item>
+        <item>Kangaroo</item>
+        <item>Panda</item>
+    </array>
+</resources>

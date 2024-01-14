@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "630441047515",
+    "project_id": "wordwise-7e702",
+    "storage_bucket": "wordwise-7e702.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:630441047515:android:63b23018cbc0b3948523fe",
+        "android_client_info": {
+          "package_name": "com.example.mainword"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6WIF3moM_FtdSXMMJsvi9ha7sMhuUTs0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
