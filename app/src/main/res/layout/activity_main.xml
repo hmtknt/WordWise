@@ -22,9 +22,9 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:text="Category: "
+        android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="@color/white"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -60,8 +60,8 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:text="Highest Point: "
-        android:textSize="20sp"
         android:textColor="@color/white"
+        android:textSize="20sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/pointsTextView" />
 
@@ -82,11 +82,11 @@
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:layout_marginStart="132dp"
-        android:layout_marginTop="52dp"
+        android:layout_marginTop="84dp"
         android:hint="Enter your guess"
         android:minHeight="48dp"
-        android:textColorHint="@color/white"
         android:textColor="@color/white"
+        android:textColorHint="@color/white"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/resultTextView" />
 
@@ -117,15 +117,16 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/leaderboardRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/guessButton"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:visibility="gone" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/guessButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -53,14 +53,14 @@ public class FrontPage extends AppCompatActivity {
 
     private void changePlayerName() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Change Player Name");
+        builder.setTitle("Set Username");
 
         // Add an EditText to the dialog to get the new player name
         final EditText input = new EditText(this);
         input.setHint("Enter your name");  // Add a hint
 
         // Set the background color of the EditText
-        input.setBackgroundColor(getResources().getColor(androidx.cardview.R.color.cardview_dark_background));
+        input.setBackgroundColor(getResources().getColor(androidx.cardview.R.color.cardview_light_background));
 
         builder.setView(input);
 
@@ -90,7 +90,7 @@ public class FrontPage extends AppCompatActivity {
         AlertDialog alertDialog = builder.create();
 
         // Set the background color of the entire AlertDialog
-        alertDialog.getWindow().setBackgroundDrawableResource(androidx.cardview.R.color.cardview_dark_background);
+        alertDialog.getWindow().setBackgroundDrawableResource(androidx.cardview.R.color.cardview_shadow_end_color);
 
         alertDialog.show();
     }
