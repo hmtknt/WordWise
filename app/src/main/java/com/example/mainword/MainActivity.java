@@ -1,6 +1,5 @@
 package com.example.mainword;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.MediaPlayer;
@@ -15,23 +14,27 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String[] categories = {"FRUITS", "ANIMALS"};
+    private List<String> categories = new ArrayList<>(); // Add this line
 
     private TextView categoryTextView, currentWordTextView, pointsTextView, resultTextView, categoryHighestPointsTextView;
     private EditText guessEditText;
@@ -53,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer correctGuessSound;
     private MediaPlayer incorrectGuessSound;
     private String playerName;
+    private DatabaseReference categoriesRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +68,9 @@ public class MainActivity extends AppCompatActivity {
 
         FirebaseDatabase database = FirebaseDatabase.getInstance();
         leaderboardRef = database.getReference("leaderboard");
+
+        // Initialize categoriesRef
+        categoriesRef = database.getReference("categories");
 
         categoryTextView = findViewById(R.id.categoryTextView);
         currentWordTextView = findViewById(R.id.currentWordTextView);
@@ -79,35 +86,46 @@ public class MainActivity extends AppCompatActivity {
 
         backgroundMusic = MediaPlayer.create(this, R.raw.backmusic);
         backgroundMusic.setLooping(false);
-        backgroundMusic.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                backgroundMusic.seekTo(0);
-                backgroundMusic.start();
-            }
+        backgroundMusic.setOnCompletionListener(mp -> {
+            backgroundMusic.seekTo(0);
+            backgroundMusic.start();
         });
         backgroundMusic.start();
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Commented out ArrayAdapter, as we will retrieve categories dynamically
 
-        guessButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                checkGuess();
-            }
-        });
+        guessButton.setOnClickListener(v -> checkGuess());
 
         guessEditText.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_DONE || event.getAction() == KeyEvent.ACTION_DOWN
-                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
-                guessButton.performClick(); // Trigger the onClick for guessButton
+            if (actionId == EditorInfo.IME_ACTION_DONE || (event.getAction() == KeyEvent.ACTION_DOWN
+                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                guessButton.performClick();
                 return true;
             }
             return false;
         });
 
-        playNextCategory();
+        // Retrieve categories from the database
+        retrieveCategories();
+    }
+
+    private void retrieveCategories() {
+        categoriesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                categories.clear(); // Clear existing categories
+                for (DataSnapshot categorySnapshot : dataSnapshot.getChildren()) {
+                    String categoryName = categorySnapshot.getKey();
+                    categories.add(categoryName);
+                }
+                playNextCategory(); // Once categories are retrieved, play the next category
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Handle errors if needed
+            }
+        });
     }
 
     @Override
@@ -129,14 +147,7 @@ public class MainActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         if (intent != null && intent.hasExtra("selectedCategory")) {
-            String selectedCategory = intent.getStringExtra("selectedCategory");
-
-            for (Categories categoryOption : Categories.values()) {
-                if (categoryOption.toString().equalsIgnoreCase(selectedCategory)) {
-                    category = categoryOption.toString();
-                    break;
-                }
-            }
+            category = intent.getStringExtra("selectedCategory");
 
             if (category == null) {
                 return;
@@ -147,36 +158,86 @@ public class MainActivity extends AppCompatActivity {
 
         categoryTextView.setText("Category: " + category.toUpperCase() + " - Player: " + playerName);
 
-        playNextWord();
+        // Retrieve the list of words for the selected category
+        getWordsForCategory(category);
     }
+    private void getWordsForCategory(String category) {
+        DatabaseReference categoryRef = categoriesRef.child(category).child("words");
 
+        categoryRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                List<String> wordsList = new ArrayList<>();
 
+                for (DataSnapshot wordSnapshot : dataSnapshot.getChildren()) {
+                    String word = wordSnapshot.getValue(String.class);
+                    wordsList.add(word);
+                }
+
+                // Check if the wordsList is not empty
+                if (!wordsList.isEmpty()) {
+                    totalWordsPerCategory = wordsList.size();
+                    playNextWord(); // Call playNextWord only when words are retrieved successfully
+                } else {
+                    // Handle the case when there are no words for the selected category
+                    resultTextView.setText("No words available for the selected category: " + category);
+                    new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Choose a new category or handle as needed
+                            // For now, we'll just choose a new category
+                            playNextCategory();
+                        }
+                    }, 2000);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Handle errors if needed
+            }
+        });
+    }
     private void playNextWord() {
         if (totalWords < totalWordsPerCategory) {
-            do {
-                selectedWord = selectWord(category);
-            } while (successfullyGuessedWords.contains(selectedWord));
+            DatabaseReference wordsRef = FirebaseDatabase.getInstance().getReference("categories").child(category).child("words");
 
-            guessedLetters.clear();
-            correctLetters.clear();
-            points = selectedWord.length();
-            updateWordDisplay();
+            wordsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                    List<String> words = new ArrayList<>();
 
-            guessButton.setEnabled(true);
-            resultTextView.setText("");
+                    for (DataSnapshot wordSnapshot : dataSnapshot.getChildren()) {
+                        words.add(wordSnapshot.getValue(String.class));
+                    }
+
+                    // Shuffle the words and select one that hasn't been used before
+                    Collections.shuffle(words);
+
+                    for (String word : words) {
+                        if (!successfullyGuessedWords.contains(word)) {
+                            selectedWord = word;
+                            break;
+                        }
+                    }
+
+                    guessedLetters.clear();
+                    correctLetters.clear();
+                    points = selectedWord.length();
+                    updateWordDisplay();
+
+                    guessButton.setEnabled(true);
+                    resultTextView.setText("");
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+                    // Handle errors if needed
+                }
+            });
         } else {
             endCategory();
         }
-    }
-
-    private String selectWord(String category) {
-        String[] words;
-        if ("fruits".equals(category)) {
-            words = getResources().getStringArray(R.array.Fruits);
-        } else {
-            words = getResources().getStringArray(R.array.Animals);
-        }
-        return words[new Random().nextInt(words.length)];
     }
 
     private void updateWordDisplay() {
@@ -232,6 +293,10 @@ public class MainActivity extends AppCompatActivity {
             correctGuess();
         }
 
+        if (successfullyGuessedWords.size() == totalWordsPerCategory) {
+            showCongratulations();
+        }
+
         if (points <= 0) {
             resultTextView.setText("Out of points! The correct word was: " + selectedWord);
             new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
@@ -242,6 +307,7 @@ public class MainActivity extends AppCompatActivity {
             }, 2000);
         }
     }
+
 
     private void correctGuess() {
         resultTextView.setText("Congratulations! You guessed the word: " + selectedWord);
@@ -261,12 +327,26 @@ public class MainActivity extends AppCompatActivity {
 
         guessEditText.setText("");
 
+        // Update category points in the leaderboard
+        updateCategoryPointsInLeaderboard(category, categoryPointsMap);
+
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
             public void run() {
                 playNextWord();
             }
         }, 2000);
+    }
+
+    // Add this method to update category points in the leaderboard
+    private void updateCategoryPointsInLeaderboard(String category, Map<String, Integer> categoryPoints) {
+        DatabaseReference playerRef = leaderboardRef.child(playerName);
+
+        // Update category points in the leaderboard
+        playerRef.child("categoryPoints").setValue(categoryPoints);
+
+        // Also, update the total points in the leaderboard
+        playerRef.child("totalPoints").setValue(totalPoints);
     }
 
     private void endCategory() {
@@ -278,6 +358,10 @@ public class MainActivity extends AppCompatActivity {
             if (totalWords >= totalWordsPerCategory) {
                 resultTextView.append("\nCorrect words guessed in this category: " + totalWords + "/" + totalWordsPerCategory);
                 resultTextView.append("\nCategory Points: " + categoryPointsMap.getOrDefault(category, 0));
+
+                // Save category points under the player's name
+                DatabaseReference playerCategoryPointsRef = leaderboardRef.child(playerName).child("CategoryPoints");
+                playerCategoryPointsRef.child(category + "Points").setValue(categoryPointsMap.getOrDefault(category, 0));
             }
 
             playNextCategory();
@@ -288,21 +372,19 @@ public class MainActivity extends AppCompatActivity {
         resultTextView.setText("Congratulations! You've completed this category!");
         playWinSound();
 
+        Map<String, Integer> playerCategoryPoints = new HashMap<>();
+
         for (String category : categories) {
             int categoryPoints = categoryPointsMap.getOrDefault(category, 0);
-            resultTextView.append("\n" + category + " Points: " + categoryPoints);
-
-            int categoryHighestPoints = getCategoryHighestPoints(category);
-            categoryHighestPointsMap.put(category, Math.max(categoryPoints, categoryHighestPoints));
-            saveCategoryHighestPoints(category, Math.max(categoryPoints, categoryHighestPoints));
+            resultTextView.append("\n" + playerName + ": " + categoryPoints + " points");
+            resultTextView.append("\n" + category + ": " + categoryPoints + " points");
         }
 
         totalPoints += getTotalCategoryPoints();
         resultTextView.append("\nTotal Points: " + totalPoints);
 
-        LeaderboardEntry playerEntry = new LeaderboardEntry(playerName, totalPoints);
-        String leaderboardKey = leaderboardRef.push().getKey();
-        leaderboardRef.child(leaderboardKey).setValue(playerEntry);
+        // Save player's total points and category points to the database
+        savePlayerPoints(playerName, totalPoints, playerCategoryPoints);
 
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
@@ -310,45 +392,27 @@ public class MainActivity extends AppCompatActivity {
                 playNextCategory();
             }
         }, 5000);
+
         updateCategoryHighestPoints();
     }
-    private void changePlayerName() {
-        AlertDialog alertDialog = new AlertDialog.Builder(this).create();
-        alertDialog.setTitle("Change Player Name");
 
-        final EditText input = new EditText(this);
-        alertDialog.setView(input);
-
-        alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                String newName = input.getText().toString().trim();
-
-                playerName = newName;
-                SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString("playerName", playerName);
-                editor.apply();
-
-                LeaderboardEntry playerEntry = new LeaderboardEntry(playerName, totalPoints);
-                String leaderboardKey = leaderboardRef.push().getKey();
-                leaderboardRef.child(leaderboardKey).setValue(playerEntry);
-
-                Toast.makeText(MainActivity.this, "Player name updated to " + newName, Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        alertDialog.show();
+    private void savePlayerPoints(String playerName, int totalPoints, Map<String, Integer> categoryPoints) {
+        LeaderboardEntry playerEntry = new LeaderboardEntry(playerName, totalPoints, categoryPoints);
+        String leaderboardKey = leaderboardRef.push().getKey();
+        leaderboardRef.child(leaderboardKey).setValue(playerEntry);
     }
+
     private void updateCategoryHighestPoints() {
-        String currentCategory = category.toUpperCase();
-        int categoryHighestPoints = getCategoryHighestPoints(currentCategory);
-        categoryHighestPointsTextView.setText("Highest Point: " + categoryHighestPoints);
+        for (String category : categories) {
+            int categoryHighestPoints = getCategoryHighestPoints(category);
+            Log.d("MainActivity", "Retrieved highest points for " + category + ": " + categoryHighestPoints);
+        }
     }
 
     private int getCategoryHighestPoints(String category) {
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-        return preferences.getInt(category + "_highest_points", 0);
+        String formattedCategory = category.substring(0, 1).toUpperCase() + category.substring(1).toLowerCase();
+        return preferences.getInt(formattedCategory + "_highest_points", 0);
     }
 
     private int getTotalCategoryPoints() {
