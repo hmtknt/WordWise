@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer incorrectGuessSound;
     private String playerName;
     private DatabaseReference categoriesRef;
+    private int currentCategoryIndex = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -145,14 +146,13 @@ public class MainActivity extends AppCompatActivity {
         totalWords = 0;
         successfullyGuessedWords.clear();
 
-        Intent intent = getIntent();
-        if (intent != null && intent.hasExtra("selectedCategory")) {
-            category = intent.getStringExtra("selectedCategory");
-
-            if (category == null) {
-                return;
-            }
+        // Get the current category based on the order of play
+        if (currentCategoryIndex < categories.size()) {
+            category = categories.get(currentCategoryIndex);
+            currentCategoryIndex++;
         } else {
+            // All categories played, end the game or handle as needed
+            resultTextView.setText("Game Over! All categories played.");
             return;
         }
 
@@ -328,7 +328,10 @@ public class MainActivity extends AppCompatActivity {
         guessEditText.setText("");
 
         // Update category points in the leaderboard
-        updateCategoryPointsInLeaderboard(category, categoryPointsMap);
+        updateCategoryPointsInLeaderboard(category, categoryPoints + points);
+        Log.d("MainActivity", "Category Points Map: " + categoryPointsMap);
+
+        new Handler(Looper.getMainLooper()).postDelayed(() -> playNextWord(), 2000);
 
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
@@ -339,14 +342,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Add this method to update category points in the leaderboard
-    private void updateCategoryPointsInLeaderboard(String category, Map<String, Integer> categoryPoints) {
-        DatabaseReference playerRef = leaderboardRef.child(playerName);
+    // Add this method to update category points in the leaderboard
+    private void updateCategoryPointsInLeaderboard(String category, int points) {
+        DatabaseReference playerRef = leaderboardRef.child(playerName).child("categoryPoints");
 
-        // Update category points in the leaderboard
-        playerRef.child("categoryPoints").setValue(categoryPoints);
+        // Format the category name consistently
+        String formattedCategory = category.substring(0, 1).toUpperCase() + category.substring(1).toLowerCase();
 
-        // Also, update the total points in the leaderboard
-        playerRef.child("totalPoints").setValue(totalPoints);
+        // Retrieve the existing total points and category points from the leaderboard
+        playerRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                Integer existingCategoryPoints = dataSnapshot.child(formattedCategory + "Points").getValue(Integer.class);
+                Integer existingTotalPoints = dataSnapshot.child("totalPoints").getValue(Integer.class);
+
+                // Update category points in the leaderboard
+                playerRef.child(formattedCategory + "Points").setValue(points);
+
+                // Update the total points with the correct cumulative value
+                int newTotalPoints = existingTotalPoints != null ? existingTotalPoints - existingCategoryPoints + points : points;
+                playerRef.child("totalPoints").setValue(newTotalPoints);
+
+                // Update the local totalPoints variable
+                totalPoints = newTotalPoints;
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Handle errors if needed
+            }
+        });
     }
 
     private void endCategory() {
@@ -376,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
 
         for (String category : categories) {
             int categoryPoints = categoryPointsMap.getOrDefault(category, 0);
-            resultTextView.append("\n" + playerName + ": " + categoryPoints + " points");
+            resultTextView.append("\n" + playerName + ": " + totalPoints + " points");
             resultTextView.append("\n" + category + ": " + categoryPoints + " points");
         }
 
@@ -384,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
         resultTextView.append("\nTotal Points: " + totalPoints);
 
         // Save player's total points and category points to the database
-        savePlayerPoints(playerName, totalPoints, playerCategoryPoints);
+        savePlayerPoints(playerName, totalPoints, categoryPointsMap);
 
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
@@ -398,8 +423,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void savePlayerPoints(String playerName, int totalPoints, Map<String, Integer> categoryPoints) {
         LeaderboardEntry playerEntry = new LeaderboardEntry(playerName, totalPoints, categoryPoints);
-        String leaderboardKey = leaderboardRef.push().getKey();
-        leaderboardRef.child(leaderboardKey).setValue(playerEntry);
+
+        // Save category points under the player's name
+        DatabaseReference playerRef = leaderboardRef.child(playerName);
+        playerRef.setValue(playerEntry);
     }
 
     private void updateCategoryHighestPoints() {
