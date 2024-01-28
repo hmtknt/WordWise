@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private String playerName;
     private DatabaseReference categoriesRef;
     private int currentCategoryIndex = 0;
+    private Category selectedCategory;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -146,10 +147,13 @@ public class MainActivity extends AppCompatActivity {
         totalWords = 0;
         successfullyGuessedWords.clear();
 
-        // Get the current category based on the order of play
-        if (currentCategoryIndex < categories.size()) {
-            category = categories.get(currentCategoryIndex);
-            currentCategoryIndex++;
+        Intent intent = getIntent();
+        if (intent != null && intent.hasExtra("selectedCategory")) {
+            category = intent.getStringExtra("selectedCategory");
+
+            if (category == null) {
+                return;
+            }
         } else {
             // All categories played, end the game or handle as needed
             resultTextView.setText("Game Over! All categories played.");
@@ -399,17 +403,11 @@ public class MainActivity extends AppCompatActivity {
 
         Map<String, Integer> playerCategoryPoints = new HashMap<>();
 
-        for (String category : categories) {
-            int categoryPoints = categoryPointsMap.getOrDefault(category, 0);
-            resultTextView.append("\n" + playerName + ": " + totalPoints + " points");
-            resultTextView.append("\n" + category + ": " + categoryPoints + " points");
-        }
-
+        int categoryPoints = categoryPointsMap.getOrDefault(category, 0);
+        resultTextView.append("\n" + category + ": " + categoryPoints + " points");
         totalPoints += getTotalCategoryPoints();
         resultTextView.append("\nTotal Points: " + totalPoints);
 
-        // Save player's total points and category points to the database
-        savePlayerPoints(playerName, totalPoints, categoryPointsMap);
 
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
@@ -418,7 +416,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }, 5000);
 
-        updateCategoryHighestPoints();
     }
 
     private void savePlayerPoints(String playerName, int totalPoints, Map<String, Integer> categoryPoints) {
@@ -444,9 +441,7 @@ public class MainActivity extends AppCompatActivity {
 
     private int getTotalCategoryPoints() {
         int total = 0;
-        for (String category : categories) {
-            total += categoryPointsMap.getOrDefault(category, 0);
-        }
+        total += categoryPointsMap.getOrDefault(category, 0);
         return total;
     }
 

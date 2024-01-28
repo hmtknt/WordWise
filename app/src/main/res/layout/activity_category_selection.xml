@@ -9,7 +9,7 @@
     <ListView
         android:id="@+id/categoryListView"
         android:layout_width="match_parent"
-        android:layout_height="596dp" />
+        android:layout_height="520dp" />
 
     <ImageView
         android:id="@+id/imageView3"
@@ -18,5 +18,23 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         app:srcCompat="@drawable/logoname" />
+
+    <Button
+        android:id="@+id/requestButton"
+        style="@style/OrangeButton"
+        android:layout_width="205dp"
+        android:layout_height="80dp"
+        android:layout_above="@+id/imageView3"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginStart="105dp"
+        android:layout_marginEnd="101dp"
+        android:layout_marginBottom="27dp"
+        android:backgroundTint="#E75C23"
+        android:fontFamily="@font/carter_one"
+        android:text="Request A Category"
+        android:textSize="16sp" />
+
 
 </RelativeLayout>

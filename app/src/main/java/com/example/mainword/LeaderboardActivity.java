@@ -24,6 +24,7 @@ public class LeaderboardActivity extends AppCompatActivity {
     private DatabaseReference leaderboardRef;
     private ListView leaderboardListView;
     private List<LeaderboardEntry> leaderboardEntries;
+    private String playerName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
