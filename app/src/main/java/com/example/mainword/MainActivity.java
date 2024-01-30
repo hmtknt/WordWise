@@ -360,11 +360,15 @@ public class MainActivity extends AppCompatActivity {
                 Integer existingCategoryPoints = dataSnapshot.child(formattedCategory + "Points").getValue(Integer.class);
                 Integer existingTotalPoints = dataSnapshot.child("totalPoints").getValue(Integer.class);
 
+                // Additional null checks
+                existingCategoryPoints = (existingCategoryPoints != null) ? existingCategoryPoints : 0;
+                existingTotalPoints = (existingTotalPoints != null) ? existingTotalPoints : 0;
+
                 // Update category points in the leaderboard
                 playerRef.child(formattedCategory + "Points").setValue(points);
 
                 // Update the total points with the correct cumulative value
-                int newTotalPoints = existingTotalPoints != null ? existingTotalPoints - existingCategoryPoints + points : points;
+                int newTotalPoints = existingTotalPoints - existingCategoryPoints + points;
                 playerRef.child("totalPoints").setValue(newTotalPoints);
 
                 // Update the local totalPoints variable

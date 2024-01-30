@@ -48,9 +48,17 @@ public class LeaderboardActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 leaderboardEntries.clear();
 
-                for (DataSnapshot entrySnapshot : dataSnapshot.getChildren()) {
-                    LeaderboardEntry entry = entrySnapshot.getValue(LeaderboardEntry.class);
-                    leaderboardEntries.add(entry);
+                for (DataSnapshot playerSnapshot : dataSnapshot.getChildren()) {
+                    String playerName = playerSnapshot.getKey();
+                    Map<String, Integer> categoryPoints = new HashMap<>();
+
+                    for (DataSnapshot categorySnapshot : playerSnapshot.child("categoryPoints").getChildren()) {
+                        String categoryName = categorySnapshot.getKey();
+                        int categoryPointsValue = categorySnapshot.getValue(Integer.class);
+                        categoryPoints.put(categoryName, categoryPointsValue);
+                    }
+
+                    leaderboardEntries.add(new LeaderboardEntry(playerName, categoryPoints));
                 }
 
                 // Sort leaderboardEntries based on total points (descending order)
@@ -66,6 +74,7 @@ public class LeaderboardActivity extends AppCompatActivity {
             }
         });
     }
+
 
     private void displayLeaderboard() {
         List<String> leaderboardStrings = new ArrayList<>();
